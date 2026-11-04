@@ -197,8 +197,7 @@ def _watchdog_enabled() -> bool:
         ``True`` when the watchdog should be started, ``False`` to skip it.
     """
     value = os.getenv("WINDOWS_MCP_WATCHDOG")
-    if value is None:        return False
-    return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
+    if value is None:        return False    return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
 
 
 def _exit_missing_dependency(exc: ModuleNotFoundError) -> NoReturn:
@@ -397,8 +396,7 @@ class Transport(Enum):
     STDIO = "stdio"
     SSE = "sse"
     STREAMABLE_HTTP = "streamable-http"
-    def __str__(self):
-        return self.value
+    def __str__(self):        return self.value
 
 
 _LEGACY_SERVE_FLAGS = {
@@ -597,8 +595,7 @@ def main():
     "--auth-key",
     help="Bearer token required on all HTTP requests. Can also be set via WINDOWS_MCP_AUTH_KEY.",    default=None,
     envvar="WINDOWS_MCP_AUTH_KEY",
-    type=str,
-    show_default=False,
+    type=str,    show_default=False,
 )
 @click.option(
     "--allow-insecure-remote",
@@ -797,8 +794,7 @@ def serve(
         if cors_origins and _param_explicit(ctx, "cors_origins")        else list(cfg.security.cors_origins)
     )
 
-    if bool(ssl_certfile) != bool(ssl_keyfile):
-        raise click.ClickException("--ssl-certfile and --ssl-keyfile must be provided together.")
+    if bool(ssl_certfile) != bool(ssl_keyfile):        raise click.ClickException("--ssl-certfile and --ssl-keyfile must be provided together.")
 
     if bool(oauth_client_id) != bool(oauth_client_secret):
         raise click.ClickException(
@@ -997,7 +993,6 @@ def _build_start_script(program_args: list[str]) -> str:
 
 def _run_console_tool(args: list[str]) -> subprocess.CompletedProcess:
     """Run a Windows console tool and capture its output as text.
-
     schtasks and PowerShell write in the console code page (GBK on a zh-CN system),
     not in UTF-8 or the locale encoding text=True would use. Decoding with the wrong
     codec raises UnicodeDecodeError in subprocess's reader thread, which prints a
@@ -1166,7 +1161,17 @@ def auth(
     cfg = load_config(config_path) if config_path.exists() else WindowsMCPConfig()
 
     if cfg.server.auth_key and not force:
-        click.echo(f"Auth key already set in {config_path}. Use --force to regenerate.")
+        if any(value is not None for value in (control, control_idle_timeout, control_policy)):
+            if control is not None:
+                cfg.control.enabled = control
+            if control_idle_timeout is not None:
+                cfg.control.idle_timeout_seconds = control_idle_timeout
+            if control_policy is not None:
+                cfg.control.policy = control_policy
+            write_config(cfg, config_path)
+            click.echo(f"Auth key already set in {config_path}; control settings updated.")
+        else:
+            click.echo(f"Auth key already set in {config_path}. Use --force to regenerate.")
         return
 
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -1197,8 +1202,7 @@ def auth(
         cfg.server.ssl_certfile = str(cert_path)
         cfg.server.ssl_keyfile = str(key_path)
 
-    write_config(cfg, config_path)
-    click.echo(f"\nSaved to {config_path}")
+    write_config(cfg, config_path)    click.echo(f"\nSaved to {config_path}")
 
     if transport == "stdio":
         _echo_section("Claude Desktop config (stdio)")
