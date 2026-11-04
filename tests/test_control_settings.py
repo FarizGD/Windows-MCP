@@ -31,8 +31,15 @@ def test_configured_idle_boundary(monkeypatch, state, timeout):
     now[0] = 100.0 + timeout - 0.01
     assert owner.status()["state"] == "user"
     assert owner.status()["wait_seconds"] == pytest.approx(0.01)
-    with pytest.raises(control.ControlBlocked):
-        owner.begin_call("PowerShell")
+    token = owner.begin_call("PowerShell")
+    assert owner.status()["state"] == "ai"
+    owner.checkpoint(token)
+    owner.end_call(token)
+
+    # The status countdown remains truthful, but begin_call may claim the
+    # desktop immediately once no physical key or button is held.
+    owner._state = "user"
+    owner._last_user = owner._last_physical_event = 100.0
     now[0] = 100.0 + timeout
     assert owner.status()["state"] == "ready"
     token = owner.begin_call("PowerShell")
@@ -49,8 +56,12 @@ def test_configured_wait_does_not_override_held_input(monkeypatch, held):
     owner._last_physical_event = 90.0
     getattr(owner, held).add(1)
     assert owner.status()["state"] == "user"
+    with pytest.raises(control.ControlBlocked, match="PHYSICAL_INPUT_HELD"):
+        owner.begin_call("PowerShell")
     getattr(owner, held).clear()
-    assert owner.status()["state"] == "ready"
+    token = owner.begin_call("PowerShell")
+    owner.checkpoint(token)
+    owner.end_call(token)
 
 
 @pytest.mark.parametrize("elapsed,expected", [(2, "user"), (4, "ready")])
