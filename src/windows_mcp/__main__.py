@@ -1202,7 +1202,8 @@ def auth(
         cfg.server.ssl_certfile = str(cert_path)
         cfg.server.ssl_keyfile = str(key_path)
 
-    write_config(cfg, config_path)    click.echo(f"\nSaved to {config_path}")
+    write_config(cfg, config_path)
+    click.echo(f"\nSaved to {config_path}")
 
     if transport == "stdio":
         _echo_section("Claude Desktop config (stdio)")
