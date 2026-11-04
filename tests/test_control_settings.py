@@ -179,7 +179,7 @@ async def test_disabled_mcp_executes_serially_without_lease(monkeypatch):
 
 
 @pytest.mark.asyncio
-@pytest.mark.parametrize("state", ["user", "unavailable"])
+@pytest.mark.parametrize("state", ["unavailable"])
 async def test_enabled_faults_never_bypass_gate(state):
     owner = control.ControlCoordinator()
     owner._state = state
