@@ -290,7 +290,10 @@ class ControlCoordinator:
                 or self._fast_pending
                 or self._rotating
                 or self._visual_paused
-                or self._state not in ("ready", "ai")
+                # Recent physical activity is reported as USER_CONTROL, but the
+                # cooldown is not an ownership lock. The held-input check above and
+                # the takeover/emergency flags still prevent overlap with active input.
+                or self._state not in ("ready", "user", "ai")
             ):
                 status = self._snapshot_locked(now)
                 code = {"user": "USER_CONTROL", "takeover_pending": "TAKEOVER_PENDING"}.get(
