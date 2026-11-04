@@ -197,8 +197,7 @@ def _watchdog_enabled() -> bool:
         ``True`` when the watchdog should be started, ``False`` to skip it.
     """
     value = os.getenv("WINDOWS_MCP_WATCHDOG")
-    if value is None:
-        return False
+    if value is None:        return False
     return value.strip().lower() in {"on", "1", "true", "yes", "enabled"}
 
 
@@ -398,7 +397,6 @@ class Transport(Enum):
     STDIO = "stdio"
     SSE = "sse"
     STREAMABLE_HTTP = "streamable-http"
-
     def __str__(self):
         return self.value
 
@@ -597,8 +595,7 @@ def main():
 )
 @click.option(
     "--auth-key",
-    help="Bearer token required on all HTTP requests. Can also be set via WINDOWS_MCP_AUTH_KEY.",
-    default=None,
+    help="Bearer token required on all HTTP requests. Can also be set via WINDOWS_MCP_AUTH_KEY.",    default=None,
     envvar="WINDOWS_MCP_AUTH_KEY",
     type=str,
     show_default=False,
@@ -797,8 +794,7 @@ def serve(
     )
     cli_cors = (
         [o.strip() for o in cors_origins.split(",") if o.strip()]
-        if cors_origins and _param_explicit(ctx, "cors_origins")
-        else list(cfg.security.cors_origins)
+        if cors_origins and _param_explicit(ctx, "cors_origins")        else list(cfg.security.cors_origins)
     )
 
     if bool(ssl_certfile) != bool(ssl_keyfile):
@@ -999,7 +995,6 @@ def _build_start_script(program_args: list[str]) -> str:
     # Switch to UTF-8 first, since the paths below can contain a non-ASCII profile folder name.
     return f'@echo off\nchcp 65001 >nul\nsetlocal\n{command} 1>>"{log_out}" 2>>"{log_err}"\n'
 
-
 def _run_console_tool(args: list[str]) -> subprocess.CompletedProcess:
     """Run a Windows console tool and capture its output as text.
 
@@ -1135,7 +1130,36 @@ def uninstall() -> None:
 )
 @click.option("--with-tls", is_flag=True, help="Generate a self-signed TLS certificate and key.")
 @click.option("--force", is_flag=True, help="Overwrite existing credentials without prompting.")
-def auth(transport: str, host: str, port: int, with_tls: bool, force: bool) -> None:
+@click.option(
+    "--control/--no-control",
+    default=None,
+    help="Enable or disable desktop ownership and input protection.",
+)
+@click.option(
+    "--control-idle-timeout",
+    type=float,
+    default=None,
+    callback=lambda ctx, param, value: (
+        _control_timeout_option(ctx, param, value) if value is not None else None
+    ),
+    help="User idle wait in seconds before control resumes.",
+)
+@click.option(
+    "--control-policy",
+    type=click.Choice(["relaxed", "balanced", "strict"]),
+    default=None,
+    help="Desktop control policy.",
+)
+def auth(
+    transport: str,
+    host: str,
+    port: int,
+    with_tls: bool,
+    force: bool,
+    control: bool | None,
+    control_idle_timeout: float | None,
+    control_policy: str | None,
+) -> None:
     """Generate an auth key (and optionally TLS certs) and save to ~/.windows-mcp/config.toml."""
     config_path = CONFIG_FILE
 
@@ -1152,6 +1176,16 @@ def auth(transport: str, host: str, port: int, with_tls: bool, force: bool) -> N
     cfg.server.transport = transport
     cfg.server.host = host
     cfg.server.port = port
+
+    # Only override control settings explicitly supplied to auth. Existing
+    # values in config.toml are preserved when the corresponding option is omitted.
+    if control is not None:
+        cfg.control.enabled = control
+    if control_idle_timeout is not None:
+        cfg.control.idle_timeout_seconds = control_idle_timeout
+    if control_policy is not None:
+        cfg.control.policy = control_policy
+
     click.echo(f"Generated auth key: {new_key}")
 
     if with_tls:
@@ -1197,8 +1231,7 @@ def auth(transport: str, host: str, port: int, with_tls: bool, force: bool) -> N
   "mcpServers": {{
     "windows-mcp": {{
       "type": "sse",
-      "url": "{sse_url}",
-      "headers": {{ "Authorization": "Bearer {new_key}" }}
+      "url": "{sse_url}",      "headers": {{ "Authorization": "Bearer {new_key}" }}
     }}
   }}
 }}"""
