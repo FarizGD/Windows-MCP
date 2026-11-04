@@ -1,0 +1,63 @@
+name: Build standalone Windows CLI
+
+on:
+  push:
+    branches: [main]
+    tags: ["v*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-windows-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.14"
+          cache: pip
+
+      - name: Install project and bundler
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install . pyinstaller
+
+      - name: Build one-file executable
+        run: >-
+          pyinstaller --noconfirm --clean --onefile --console
+          --name windows-mcp
+          --collect-all windows_mcp
+          --collect-all fastmcp
+          --collect-all comtypes
+          --collect-all dxcam
+          --collect-all posthog
+          --collect-all thefuzz
+          --collect-all fuzzywuzzy
+          windows_mcp_cli.py
+
+      - name: Smoke-test executable
+        run: |
+          .\\dist\\windows-mcp.exe --help
+          .\\dist\\windows-mcp.exe serve --help
+
+      - name: Upload standalone executable
+        uses: actions/upload-artifact@v6
+        with:
+          name: windows-mcp-windows-x64
+          path: dist/windows-mcp.exe
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Publish release asset
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/windows-mcp.exe
+          generate_release_notes: true
