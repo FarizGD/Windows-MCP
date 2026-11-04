@@ -170,8 +170,9 @@ def test_start_preserves_cooldown_after_real_physical_input(monkeypatch):
     owner.start()
     try:
         assert owner.status()["state"] == "user"
-        with pytest.raises(control.ControlBlocked, match="USER_CONTROL"):
-            owner.begin_call("Wait")
+        token = owner.begin_call("Wait")
+        owner.checkpoint(token)
+        owner.end_call(token)
     finally:
         owner.stop()
 
